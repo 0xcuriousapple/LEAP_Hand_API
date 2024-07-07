@@ -4,6 +4,9 @@ import numpy as np
 from leap_hand_utils.dynamixel_client import *
 import leap_hand_utils.leap_hand_utils as lhu
 import time
+import socket
+import json
+
 #######################################################
 """This can control and query the LEAP Hand
 
@@ -80,12 +83,65 @@ class LeapNode:
         return self.dxl_client.read_cur()
 #init the node
 def main(**kwargs):
-    leap_hand = LeapNode()
-    while True:
-        leap_hand.set_allegro(np.zeros(16))
-        print("Position: " + str(leap_hand.read_pos()))
-        time.sleep(0.03)
 
+    # Initialize socket server
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server_socket.bind(('localhost', 65431))
+    server_socket.listen(1)
+
+    # Accept a connection
+    client_socket, client_address = server_socket.accept()
+    
+    # Motors mapping on hardware
+    motors ={
+        2: "thumb_up",
+        0: "thumb_fw",
+        3: "thumb_tip",
+        5: "index_mcp",
+        6: "index_pip",
+        7: "index_dip",
+        9: "middle_mcp",
+        10: "middle_pip",
+        11: "middle_dip",
+        13: "ring_mcp",
+        14: "ring_pip",
+        15: "ring_dip"
+    }
+
+
+    while True: 
+        # Receive data from the client
+        data = client_socket.recv(1024)
+        if not data:
+            break
+        
+        # Parse the received JSON data
+        received_positions = json.loads(data.decode())
+
+        mapped_positions = np.zeros(16)
+        for motor_id, motor_name in motors.items():
+           print(motor_id)
+           mapped_positions[motor_id] = received_positions[motor_name]
+
+        print(received_positions)
+        print(mapped_positions)
+
+    # leap_hand = LeapNode()
+    # while True:
+    #     leap_hand.set_allegro(np.zeros(16))
+    #     print("Position: " + str(leap_hand.read_pos()))
+    #     time.sleep(0.03)
 
 if __name__ == "__main__":
     main()
+
+
+# 12 : 0
+# 13 : 1
+# 14 : 2
+# 15 : 3
+
+# 0 : 4
+# 1 : 5
+# 2 : 6
+# 3 : 7
