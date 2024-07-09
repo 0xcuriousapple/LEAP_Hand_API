@@ -4,17 +4,14 @@ import numpy as np
 from leap_hand_utils.dynamixel_client import *
 import leap_hand_utils.leap_hand_utils as lhu
 import time
-import socket
-import json
-
 #######################################################
 """This can control and query the LEAP Hand
 
-I recommend you only query when necessary and below 90 samples a second.  Each of position, velocity, and current costs one sample, so you can sample all three at 30 hz or one at 90hz.
+I recommend you only query when necessary and below 90 samples a second.  Each of position, velociy and current costs one sample, so you can sample all three at 30 hz or one at 90hz.
 
 #Allegro hand conventions:
 #0.0 is the all the way out beginning pose, and it goes positive as the fingers close more and more
-#http://wiki.wonikrobotics.com/AllegroHandWiki/index.php/Joint_Zeros_and_Directions_Setup_Guide I believe the black and white figure (not blue motors) is the zero position, and the + is the correct way around.  LEAP Hand in my videos start at zero position and that looks like that figure.
+#http://wiki.wonikrobotics.com/AllegroHandWiki/index.php/Joint_Zeros_and_Directions_Setup_Guide I belive the black and white figure (not blue motors) is the zero position, and the + is the correct way around.  LEAP Hand in my videos start at zero position and that looks like that figure.
 
 #LEAP hand conventions:
 #180 is flat out for the index, middle, ring, fingers, and positive is closing more and more.
@@ -83,66 +80,16 @@ class LeapNode:
         return self.dxl_client.read_cur()
 #init the node
 def main(**kwargs):
-
-    # Initialize socket server
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('localhost', 65431))
-    server_socket.listen(1)
-
-    # Accept a connection
-    client_socket, client_address = server_socket.accept()
-    
-    # Motors mapping on hardware
-    motors ={
-        2: "thumb_up",
-        0: "thumb_fw",
-        3: "thumb_tip",
-        4: "index_mcp",
-        5: "index_pip",
-        7: "index_dip",
-        8: "middle_mcp",
-        9: "middle_pip",
-        11: "middle_dip",
-        12: "ring_mcp",
-        13: "ring_pip",
-        15: "ring_dip"
-    }
-
-    buffer = ""
-
-    # Initialize LeapNode outside the loop
     leap_hand = LeapNode()
+    while True:
+        x =np.zeros(16)
+        # x[0] = -1
+        x[2] = 1.5
+        x[3] = 1
+        leap_hand.set_allegro(x)
+        print("Position: " + str(leap_hand.read_pos()))
+        time.sleep(0.03)
 
-    while True: 
-        # Receive data from the client
-        data = client_socket.recv(1024)
-        if not data:
-            break
-        
-        # Append new data to the buffer
-        buffer += data.decode()
 
-        # Process all complete JSON packets
-        while True:
-            try:
-                # Try to parse the JSON data
-                received_positions, idx = json.JSONDecoder().raw_decode(buffer)
-                buffer = buffer[idx:]  # Remove the processed part from the buffer
-            except json.JSONDecodeError:
-                # Incomplete JSON data, break the loop and wait for more data
-                break
-
-            # Map positions to the motors
-            mapped_positions = np.zeros(16)
-            for motor_id, motor_name in motors.items():
-                if motor_id == 0 : 
-                    mapped_positions[motor_id] = -1 * received_positions[motor_name]
-                else:
-                    mapped_positions[motor_id] = received_positions[motor_name]
-            # Control the LEAP hand
-            leap_hand.set_allegro(mapped_positions)
-            print(mapped_positions)
-            # print("Position: " + str(leap_hand.read_pos()))
-            
 if __name__ == "__main__":
     main()
