@@ -135,11 +135,14 @@ def main(**kwargs):
             # Map positions to the motors
             mapped_positions = np.zeros(16)
             for motor_id, motor_name in motors.items():
-                if motor_id == 0 : 
+                if motor_id == 0: 
                     mapped_positions[motor_id] = -1 * received_positions[motor_name]
                 else:
                     mapped_positions[motor_id] = received_positions[motor_name]
             # Control the LEAP hand
+            # mapped_positions[0] =0
+            # mapped_positions[2] =0
+            # mapped_positions[3] =0
             leap_hand.set_allegro(mapped_positions)
             print(mapped_positions)
             # print("Position: " + str(leap_hand.read_pos()))
