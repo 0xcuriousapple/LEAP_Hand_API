@@ -3,7 +3,7 @@ import time
 import numpy as np
 from leap_hand_utils.dynamixel_client import *
 import leap_hand_utils.leap_hand_utils as lhu
-import tf.transformations as tf
+import transforms3d as tf
 
 # UR5e setup
 robot_ip = "192.168.0.175"
@@ -104,6 +104,13 @@ def move_robot(cartesian_position, euler_orientation):
             robot.close()
             print("Closed robot connection.")
 
+def remap_positions(joint_positions):
+    mapping = [6, 4, 5, 7, 10, 8, 9, 11, 14, 12, 13, 15, 0, 1, 2, 3]
+    remapped_positions = [0] * 16
+    for i, pos in enumerate(mapping):
+        remapped_positions[pos] = joint_positions[i]
+    return remapped_positions
+
 def main():
     leap_hand = LeapNode()
     while True:
@@ -122,8 +129,11 @@ def main():
             # Convert quaternion to Euler angles (radians)
             euler_orientation = tf.euler_from_quaternion(quaternion)
 
+            # Remap joint positions
+            remapped_positions = remap_positions(joint_positions)
+
             move_robot(cartesian_position, list(euler_orientation))
-            leap_hand.set_allegro(joint_positions)
+            leap_hand.set_allegro(remapped_positions)
             print("Position: " + str(leap_hand.read_pos()))
             time.sleep(0.03)
         except ValueError:
