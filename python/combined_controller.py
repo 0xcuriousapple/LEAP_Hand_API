@@ -1,5 +1,6 @@
 import urx
 import time
+import math
 import numpy as np
 from leap_hand_utils.dynamixel_client import *
 import leap_hand_utils.leap_hand_utils as lhu
@@ -111,6 +112,40 @@ def remap_positions(joint_positions):
         remapped_positions[pos] = joint_positions[i]
     return remapped_positions
 
+def quaternion_to_euler_array(quaternion):
+    """
+    Convert a quaternion into Euler angles (roll, pitch, yaw)
+    Roll is rotation around the x-axis in radians (counterclockwise)
+    Pitch is rotation around the y-axis in radians (counterclockwise)
+    Yaw is rotation around the z-axis in radians (counterclockwise)
+    
+    Args:
+        quaternion (list or tuple): Quaternion in the form [x, y, z, w]
+        
+    Returns:
+        list: Euler angles in the form [roll, pitch, yaw]
+    """
+    x, y, z, w = quaternion
+    
+    # Roll (x-axis rotation)
+    sinr_cosp = 2 * (w * x + y * z)
+    cosr_cosp = 1 - 2 * (x * x + y * y)
+    roll = math.atan2(sinr_cosp, cosr_cosp)
+    
+    # Pitch (y-axis rotation)
+    sinp = 2 * (w * y - z * x)
+    if abs(sinp) >= 1:
+        pitch = math.copysign(math.pi / 2, sinp)  # Use 90 degrees if out of range
+    else:
+        pitch = math.asin(sinp)
+    
+    # Yaw (z-axis rotation)
+    siny_cosp = 2 * (w * z + x * y)
+    cosy_cosp = 1 - 2 * (y * y + z * z)
+    yaw = math.atan2(siny_cosp, cosy_cosp)
+    
+    return [roll, pitch, yaw]
+
 def main():
     leap_hand = LeapNode()
     while True:
@@ -127,11 +162,12 @@ def main():
             joint_positions = values[7:]
 
             # Convert quaternion to Euler angles (radians)
-            euler_orientation = tf.euler_from_quaternion(quaternion)
+            euler_orientation = quaternion_to_euler_array(quaternion)
 
             # Remap joint positions
             remapped_positions = remap_positions(joint_positions)
 
+            print(cartesian_position, euler_orientation)
             move_robot(cartesian_position, list(euler_orientation))
             leap_hand.set_allegro(remapped_positions)
             print("Position: " + str(leap_hand.read_pos()))
